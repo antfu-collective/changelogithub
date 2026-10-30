@@ -3,7 +3,7 @@ import { x } from 'tinyexec'
 import { isStable } from 'verkit'
 
 export async function getGitHubRepo(baseUrl: string) {
-  const url = await execCommand('git', ['config', '--get', 'remote.origin.url'])
+  const url = await execCommand('git', ['remote', 'get-url', 'origin'])
   const escapedBaseUrl = baseUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const regex = new RegExp(`${escapedBaseUrl}[\/:]([\\w\\d._-]+?)\\/([\\w\\d._-]+?)(\\.git)?$`, 'i')
   const match = regex.exec(url)
