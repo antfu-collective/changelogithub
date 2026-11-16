@@ -10,6 +10,7 @@ import { glob } from 'tinyglobby'
 export async function sendRelease(
   options: ChangelogOptions,
   content: string,
+  hasAssets = false,
 ) {
   const headers = getHeaders(options)
   let url = `https://${options.baseUrlApi}/repos/${options.releaseRepo}/releases`
@@ -27,9 +28,11 @@ export async function sendRelease(
   catch {
   }
 
+  // Immutable releases reject assets once published, so a new release with assets
+  // stays a draft until `publishRelease` runs after the upload.
   const body = {
     body: content,
-    draft: options.draft || false,
+    draft: options.draft || (method === 'POST' && hasAssets),
     name: options.name || options.to,
     prerelease: options.prerelease,
     tag_name: options.to,
@@ -44,6 +47,16 @@ export async function sendRelease(
     headers,
   })
   console.log(green(`Released on ${res.html_url}`))
+  return res
+}
+
+export async function publishRelease(options: ChangelogOptions, release: { url: string }) {
+  const res = await $fetch(release.url, {
+    method: 'PATCH',
+    body: JSON.stringify({ draft: false }),
+    headers: getHeaders(options),
+  })
+  console.log(green(`Published ${res.html_url}`))
   return res
 }
 
@@ -190,6 +203,7 @@ export async function uploadAssets(options: ChangelogOptions, assets: string | s
     headers,
   })
 
+  const failed: string[] = []
   for (const asset of expandedAssets) {
     const filePath = path.resolve(asset)
     try {
@@ -212,10 +226,14 @@ export async function uploadAssets(options: ChangelogOptions, assets: string | s
       }
       catch (error) {
         console.error(red(`Failed to upload ${fileName}: ${error}`))
+        failed.push(fileName)
       }
     }
     catch (error) {
       console.error(red(`Failed to read file ${filePath}: ${error}`))
+      failed.push(asset)
     }
   }
+  if (failed.length)
+    throw new Error(`Failed to upload ${failed.length} asset(s): ${failed.join(', ')}`)
 }

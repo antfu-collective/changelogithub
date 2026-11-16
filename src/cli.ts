@@ -6,7 +6,7 @@ import { blue, bold, cyan, dim, red, yellow } from 'ansis'
 import cac from 'cac'
 import { x } from 'tinyexec'
 import { version } from '../package.json'
-import { uploadAssets } from './github'
+import { publishRelease, uploadAssets } from './github'
 import { generate, hasTagOnGitHub, isRepoShallow, sendRelease } from './index'
 
 const cli = cac('changelogithub')
@@ -106,10 +106,22 @@ cli
         return
       }
 
-      const release = await sendRelease(config, output)
+      const hasAssets = Boolean(args.assets?.length)
+      const release = await sendRelease(config, output, hasAssets)
 
-      if (args.assets && args.assets.length > 0) {
-        await uploadAssets(config, args.assets, release)
+      if (hasAssets) {
+        try {
+          await uploadAssets(config, args.assets, release)
+        }
+        catch (e) {
+          console.error(red(String(e)))
+          if (release.draft)
+            console.error(yellow(`The release was left as a draft: ${release.html_url}`))
+          process.exitCode = 1
+          return
+        }
+        if (release.draft && !config.draft)
+          await publishRelease(config, release)
       }
     }
     catch (e: any) {
