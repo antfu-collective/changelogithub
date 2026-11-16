@@ -6,7 +6,7 @@ import { blue, bold, cyan, dim, red, yellow } from 'ansis'
 import cac from 'cac'
 import { x } from 'tinyexec'
 import { version } from '../package.json'
-import { uploadAssets } from './github'
+import { publishRelease, uploadAssets } from './github'
 import { generate, hasTagOnGitHub, isRepoShallow, sendRelease } from './index'
 
 const cli = cac('changelogithub')
@@ -106,10 +106,13 @@ cli
         return
       }
 
-      const release = await sendRelease(config, output)
+      const hasAssets = Boolean(args.assets?.length)
+      const release = await sendRelease(config, output, hasAssets)
 
-      if (args.assets && args.assets.length > 0) {
+      if (hasAssets) {
         await uploadAssets(config, args.assets, release)
+        if (release.draft && !config.draft)
+          await publishRelease(config, release)
       }
     }
     catch (e: any) {
