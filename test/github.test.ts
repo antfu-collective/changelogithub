@@ -1,5 +1,5 @@
 import type { ChangelogOptions } from '../src/types'
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { $fetch } from 'ofetch'
@@ -85,5 +85,6 @@ describe('uploadAssets', () => {
     await expect(uploadAssets(options, file, { upload_url: 'https://uploads.github.com/upload{?name,label}' }))
       .rejects
       .toThrow('Failed to upload 1 asset(s): app.zip')
+    await rm(dir, { recursive: true })
   })
 })

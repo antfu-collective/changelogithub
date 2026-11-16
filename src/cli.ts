@@ -110,7 +110,16 @@ cli
       const release = await sendRelease(config, output, hasAssets)
 
       if (hasAssets) {
-        await uploadAssets(config, args.assets, release)
+        try {
+          await uploadAssets(config, args.assets, release)
+        }
+        catch (e) {
+          console.error(red(String(e)))
+          if (release.draft)
+            console.error(yellow(`The release was left as a draft: ${release.html_url}`))
+          process.exitCode = 1
+          return
+        }
         if (release.draft && !config.draft)
           await publishRelease(config, release)
       }
